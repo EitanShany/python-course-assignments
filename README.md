@@ -1,3 +1,3 @@
 # python-course-assignments
 
-https://github.com/EitanShany/python-course-assignments
+https://eitanshany.github.io/python-course-assignments/
