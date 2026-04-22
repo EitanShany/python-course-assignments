@@ -1,10 +1,16 @@
 
 
-## השתמשתי ב ChetGPT5.3
+## I used ChetGPT5.3
 
+I chose to calculate subcutaneous (S.C.) tumor volume in mice.
+I defined the parameters as length and width, along with the calculation formula.
+I also implemented an error message in case there is a mix-up between length and width (which is important).
 
+I realized that calculating each mouse individually is inefficient, so I asked for a new script that takes a dataset from an Excel file and generates a new Excel file.
 
+In addition, I ran several tests and improved the script’s handling of errors.
 
+## my converseition with the ChatGPT
 תכתוב לי בפיטון קוד שעושה חישוב של נפח גידול
 הקוד צריך לבקש ממני שתי מדדים:|
 1. רוחב הגידול (W)
