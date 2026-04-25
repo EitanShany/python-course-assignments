@@ -1,4 +1,9 @@
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    print("Error: pandas is not installed. Please run: pip install -r requirements.txt")
+    exit()
+
 import os
 
 # Ask user for file path
