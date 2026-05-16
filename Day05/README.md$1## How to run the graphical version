@@ -1,0 +1,12 @@
+The project also includes a simple graphical launcher:
+
+    python gui_tumor_growth_analysis.py
+
+In the graphical window, you can:
+
+    1: Type or paste the Excel file path.
+    2: Click Browse and select the Excel file.
+    3: Choose an output folder.
+    4: Click Run Analysis.
+
+Drag and drop support is optional and requires tkinterdnd2, which is included in requirements.txt. If drag and drop does not work, the Browse button will still work.
