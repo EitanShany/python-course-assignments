@@ -4,6 +4,9 @@ This project analyzes longitudinal tumor-volume measurements from a mouse
 experiment. The input is an Excel workbook with tumor-volume measurements over
 time, split by treatment group.
 
+First I used chetGPT in the web to diffined and write the code.
+After I was happy with the result I copy it (include exporte of the conversation) and use the chetGPT Codax to finelised it
+
 ## Assignment Goal
 
 Find an interesting lab data file, design a useful analysis for it, and
@@ -91,36 +94,30 @@ The Excel report contains:
 - `Responder_TV_Summary`
 - `Errors`
 
-## Command Line Usage
+## How to Run
 
-From inside the `Day05` folder:
-
-```bash
-python tumor_growth_analysis.py Input/TV_template.xlsx --output-dir Output
-```
-
-From the repository root:
+First install the required packages:
 
 ```bash
-python python-course-assignments/Day05/tumor_growth_analysis.py python-course-assignments/Day05/Input/TV_template.xlsx --output-dir python-course-assignments/Day05/Output
+pip install -r requirements.txt
 ```
 
-## GUI Usage
+The project can be run with the graphical
+interface.
 
-Run:
+### Graphical Interface
+
+From inside the `Day05` folder, run:
 
 ```bash
 python gui_tumor_growth_analysis.py
 ```
 
-The GUI allows selecting an Excel input file, selecting an output folder, and
-running the analysis. Drag and drop is available when `tkinterdnd2` is installed.
+Then choose:
 
-## Install Requirements
-
-```bash
-pip install -r requirements.txt
-```
+1. The input Excel file, for example `Input/EXP_ES.xlsx`.
+2. The output folder, for example `Output`.
+3. Click `Run Analysis`.
 
 ## Run Tests
 
