@@ -153,8 +153,4 @@ access. This makes the code easier to debug and more reliable.
 
 ## AI interaction
 
-I used AI to help plan the project structure, choose suitable data sources, and
-compare IEDB with antibody-focused databases. We decided that Thera-SAbDab is
-better for antibody names, clinical status, and variable-region sequences,
-while PubMed is useful for counting references. AI also helped split the code
-into separate modules, add a GUI version, and write pytest tests.
+I used ChetGPT Codex to help plan the project structure, choose suitable data sources, and compare IEDB with antibody-focused databases. We decided that Thera-SAbDab is better for antibody names, clinical status, and variable-region sequences, while PubMed is useful for counting references. AI also helped split the code into separate modules, add a GUI version, and write pytest tests.
