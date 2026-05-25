@@ -9,7 +9,20 @@ from pathlib import Path
 from openpyxl import Workbook
 
 
-UNKNOWN_VALUES = {"", "na", "n/a", "none", "tbc", "nfd", "not available"}
+UNKNOWN_VALUES = {
+    "",
+    "na",
+    "n/a",
+    "n.a",
+    "n.a.",
+    "none",
+    "tbc",
+    "nfd",
+    "not available",
+    "unknown",
+    "unknown.",
+}
+MISSING_VALUE = "N.A"
 
 OUTPUT_COLUMNS = [
     "antibody_name",
@@ -21,6 +34,8 @@ OUTPUT_COLUMNS = [
     "highest_clinical_trial",
     "estimated_status",
     "pubmed_reference_count",
+    "data_source",
+    "sequence_page_url",
     "heavy_variable_region_sequence",
     "light_variable_region_sequence",
 ]
@@ -31,6 +46,10 @@ TARGET_ALIASES = {
     "4-1BB": ["4-1BB", "41BB", "TNFRSF9", "CD137"],
     "41BB": ["4-1BB", "41BB", "TNFRSF9", "CD137"],
     "CD137": ["4-1BB", "41BB", "TNFRSF9", "CD137"],
+    "CLEAC9A": ["CLEAC9A", "CLEC9A", "DNGR1", "DNGR-1", "CD370"],
+    "CLEC9A": ["CLEC9A", "DNGR1", "DNGR-1", "CD370"],
+    "DNGR1": ["CLEC9A", "DNGR1", "DNGR-1", "CD370"],
+    "CD370": ["CLEC9A", "DNGR1", "DNGR-1", "CD370"],
     "EPCAM": ["EPCAM", "HEPCAM", "CD326"],
     "HEPCAM": ["EPCAM", "HEPCAM", "CD326"],
     "CD326": ["EPCAM", "HEPCAM", "CD326"],
@@ -65,6 +84,9 @@ CANCER_TARGET_CATEGORIES = {
     "DLL3": "Tumor-associated antigen",
     "CD276": "Tumor-associated antigen / immune modulator",
     "B7H3": "Tumor-associated antigen / immune modulator",
+    "CLEC9A": "Dendritic-cell target",
+    "DNGR1": "Dendritic-cell target",
+    "CD370": "Dendritic-cell target",
     "CD3": "T-cell engager component",
     "CD8": "T-cell marker",
     "HLA": "Peptide-HLA / TCR-like target",
@@ -80,6 +102,13 @@ def clean_text(value: str | None) -> str:
     if value.lower() in UNKNOWN_VALUES:
         return ""
     return value
+
+
+def output_value(value: str | int | None) -> str | int:
+    """Return the assignment missing-value marker for empty output fields."""
+    if isinstance(value, int):
+        return value
+    return clean_text(value) or MISSING_VALUE
 
 
 def first_value(row: dict[str, str], *field_names: str) -> str:
@@ -142,14 +171,20 @@ def antibody_species_or_type(genetics: str) -> str:
         return "Human"
     if "chimeric" in lower_genetics:
         return "Chimeric"
-    return genetics or "Unknown"
+    return genetics
 
 
-def target_category(target: str) -> str:
+def target_category(target: str, preferred_markers: list[str] | None = None) -> str:
     """Classify a cancer target using a small practical lookup table."""
-    upper_target = target.upper()
+    normalized_target = normalize_target_text(target)
+    for marker in preferred_markers or []:
+        normalized_marker = normalize_target_text(marker)
+        for category_marker, category in CANCER_TARGET_CATEGORIES.items():
+            if normalize_target_text(category_marker) == normalized_marker:
+                return category
+
     for marker, category in CANCER_TARGET_CATEGORIES.items():
-        if marker in upper_target:
+        if normalize_target_text(marker) in normalized_target:
             return category
     return "Other / unclassified"
 
@@ -170,10 +205,14 @@ def cancer_indication(row: dict[str, str]) -> str:
         value = clean_text(row.get(field))
         if value:
             values.append(value)
-    return "; ".join(values) or "Unknown"
+    return "; ".join(values)
 
 
-def build_processed_row(row: dict[str, str], pubmed_count: int) -> dict[str, str | int]:
+def build_processed_row(
+    row: dict[str, str],
+    pubmed_count: int,
+    data_source: str = "Thera-SAbDab",
+) -> dict[str, str | int]:
     """Convert a raw database row into the final assignment output columns."""
     target = first_value(row, "Target", "target_antigen_or_gene")
     species_or_type = first_value(row, "antibody_species_or_type") or antibody_species_or_type(
@@ -181,24 +220,25 @@ def build_processed_row(row: dict[str, str], pubmed_count: int) -> dict[str, str
     )
 
     return {
-        "antibody_name": first_value(row, "Therapeutic", "antibody_name"),
-        "target_antigen_or_gene": target,
-        "target_category": first_value(row, "target_category") or target_category(target),
-        "cancer_indication": cancer_indication(row),
-        "antibody_species_or_type": species_or_type,
-        "antibody_format": first_value(row, "Format", "antibody_format") or "Unknown",
-        "highest_clinical_trial": first_value(row, "Highest_Clin_Trial (Feb '25)", "highest_clinical_trial")
-        or "Unknown",
-        "estimated_status": first_value(row, "Est. Status", "estimated_status") or "Unknown",
+        "antibody_name": output_value(first_value(row, "Therapeutic", "antibody_name")),
+        "target_antigen_or_gene": output_value(target),
+        "target_category": output_value(first_value(row, "target_category") or target_category(target)),
+        "cancer_indication": output_value(cancer_indication(row)),
+        "antibody_species_or_type": output_value(species_or_type),
+        "antibody_format": output_value(first_value(row, "Format", "antibody_format")),
+        "highest_clinical_trial": output_value(
+            first_value(row, "Highest_Clin_Trial (Feb '25)", "highest_clinical_trial")
+        ),
+        "estimated_status": output_value(first_value(row, "Est. Status", "estimated_status")),
         "pubmed_reference_count": pubmed_count,
-        "heavy_variable_region_sequence": first_value(
-            row, "HeavySequence", "heavy_variable_region_sequence"
-        )
-        or "Not available",
-        "light_variable_region_sequence": first_value(
-            row, "LightSequence", "light_variable_region_sequence"
-        )
-        or "Not available",
+        "data_source": output_value(first_value(row, "data_source") or data_source),
+        "sequence_page_url": output_value(first_value(row, "sequence_page_url")),
+        "heavy_variable_region_sequence": output_value(
+            first_value(row, "HeavySequence", "heavy_variable_region_sequence")
+        ),
+        "light_variable_region_sequence": output_value(
+            first_value(row, "LightSequence", "light_variable_region_sequence")
+        ),
     }
 
 
@@ -215,6 +255,8 @@ def row_matches_species(row: dict[str, str], species_filters: list[str] | None =
     for species_filter in species_filters:
         normalized_filter = normalize_target_text(species_filter)
         if normalized_filter in BUILT_IN_SPECIES_FILTERS:
+            if normalized_filter == normalize_target_text("Unknown") and not normalized_species:
+                return True
             if normalized_filter == normalized_species:
                 return True
         elif normalized_filter in normalized_species:
@@ -225,6 +267,79 @@ def row_matches_species(row: dict[str, str], species_filters: list[str] | None =
 def sort_by_quality(rows: list[dict[str, str | int]]) -> list[dict[str, str | int]]:
     """Sort rows by literature support, highest PubMed reference count first."""
     return sorted(rows, key=lambda row: int(row.get("pubmed_reference_count", 0)), reverse=True)
+
+
+def deduplicate_results(rows: list[dict[str, str | int]]) -> list[dict[str, str | int]]:
+    """Merge duplicate antibody rows while preserving source and link evidence."""
+    merged_rows: dict[tuple[str, str, str, str], dict[str, str | int]] = {}
+    for row in rows:
+        normalized_row = normalize_output_row(row)
+        key = result_dedup_key(normalized_row)
+        if key not in merged_rows:
+            merged_rows[key] = normalized_row
+            continue
+        merged_rows[key] = merge_duplicate_rows(merged_rows[key], normalized_row)
+    return list(merged_rows.values())
+
+
+def normalize_output_row(row: dict[str, str | int]) -> dict[str, str | int]:
+    """Make sure every output row contains every expected output column."""
+    normalized: dict[str, str | int] = {}
+    for column in OUTPUT_COLUMNS:
+        value = row.get(column)
+        if column == "pubmed_reference_count":
+            normalized[column] = int(value) if str(value).isdigit() else 0
+        else:
+            normalized[column] = output_value(str(value) if value is not None else "")
+    return normalized
+
+
+def result_dedup_key(row: dict[str, str | int]) -> tuple[str, str, str, str]:
+    """Build a stable duplicate key from name, target, and available sequences."""
+    name = normalized_key_value(row.get("antibody_name", ""))
+    target = normalized_key_value(row.get("target_antigen_or_gene", ""))
+    heavy_sequence = normalized_key_value(row.get("heavy_variable_region_sequence", ""))
+    light_sequence = normalized_key_value(row.get("light_variable_region_sequence", ""))
+    if not name and not heavy_sequence and not light_sequence:
+        name = normalized_key_value(row.get("sequence_page_url", ""))
+    return name, target, heavy_sequence, light_sequence
+
+
+def normalized_key_value(value: str | int) -> str:
+    """Normalize a value for duplicate detection, treating N.A as missing."""
+    return normalize_target_text(clean_text(str(value)))
+
+
+def merge_duplicate_rows(
+    existing_row: dict[str, str | int],
+    new_row: dict[str, str | int],
+) -> dict[str, str | int]:
+    """Combine source/link fields and keep the most informative values."""
+    merged_row = dict(existing_row)
+    for column in OUTPUT_COLUMNS:
+        if column == "pubmed_reference_count":
+            merged_row[column] = max(
+                int(existing_row.get(column, 0)),
+                int(new_row.get(column, 0)),
+            )
+        elif column in {"data_source", "sequence_page_url"}:
+            merged_row[column] = merge_text_values(
+                str(existing_row.get(column, MISSING_VALUE)),
+                str(new_row.get(column, MISSING_VALUE)),
+            )
+        elif str(existing_row.get(column, MISSING_VALUE)) == MISSING_VALUE:
+            merged_row[column] = new_row.get(column, MISSING_VALUE)
+    return merged_row
+
+
+def merge_text_values(first: str, second: str) -> str:
+    """Merge semicolon-delimited text fields without duplicates."""
+    values = []
+    for value in [*first.split(";"), *second.split(";")]:
+        value = clean_text(value)
+        if value and value != MISSING_VALUE and value not in values:
+            values.append(value)
+    return "; ".join(values) or MISSING_VALUE
 
 
 def filter_and_process_antibodies(
@@ -252,7 +367,7 @@ def filter_and_process_antibodies(
             pubmed_count = reference_counter(antibody_name)
         processed_rows.append(build_processed_row(row, pubmed_count))
 
-    return sort_by_quality(processed_rows)[: max(limit, 0)]
+    return sort_by_quality(deduplicate_results(processed_rows))[: max(limit, 0)]
 
 
 def write_results(output_path: Path, rows: list[dict[str, str | int]]) -> None:

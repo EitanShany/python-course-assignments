@@ -8,16 +8,17 @@ from pathlib import Path
 
 from antibody_processing import (
     expanded_target_queries,
-    filter_and_process_antibodies,
     write_excel_results,
     write_results,
 )
 from data_sources import (
     count_pubmed_references,
+    fetch_iedb_antigen_aliases,
     fetch_ncbi_gene_aliases,
     load_antibody_table,
     write_target_aliases,
 )
+from multi_source_search import search_all_sources
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -60,13 +61,19 @@ def safe_count_pubmed_references(antibody_name: str) -> int:
 
 
 def safe_fetch_gene_aliases(target_query: str) -> list[str]:
-    """Return NCBI Gene aliases, or just the query if NCBI is unavailable."""
+    """Return NCBI Gene and IEDB aliases, or just the query if sites are unavailable."""
     seed_aliases = expanded_target_queries(target_query)
     try:
         aliases = fetch_ncbi_gene_aliases(target_query, seed_aliases=seed_aliases)
     except Exception as error:
         print(f"Could not fetch NCBI Gene aliases for {target_query}: {error}")
         aliases = seed_aliases
+
+    try:
+        iedb_aliases = fetch_iedb_antigen_aliases(target_query, seed_aliases=aliases)
+        aliases = list(dict.fromkeys([*aliases, *iedb_aliases]))
+    except Exception as error:
+        print(f"Could not fetch IEDB antigen aliases for {target_query}: {error}")
 
     alias_path = write_target_aliases(target_query, aliases)
     print(f"Target aliases saved to: {alias_path}")
@@ -87,9 +94,11 @@ def print_summary(target_query: str, rows: list[dict[str, str | int]], output_pa
     print()
     print("Top results:")
     for row in rows[:5]:
-        print(
-            f"- {row['antibody_name']} | target: {row['target_antigen_or_gene']} | "
-            f"trial: {row['highest_clinical_trial']} | "
+        safe_print(
+            "- "
+            f"{summary_value(row['antibody_name'])} | "
+            f"target: {summary_value(row['target_antigen_or_gene'])} | "
+            f"source: {summary_value(row.get('data_source', 'N.A'))} | "
             f"PubMed refs: {row['pubmed_reference_count']}"
         )
 
@@ -99,6 +108,22 @@ def parse_species_filters(species_text: str | None) -> list[str]:
     if not species_text:
         return []
     return [species.strip() for species in species_text.split(",") if species.strip()]
+
+
+def summary_value(value: str | int, max_length: int = 120) -> str:
+    """Return a compact one-line value for CLI summaries."""
+    text = str(value).replace("\n", " ").strip()
+    if len(text) > max_length:
+        return text[: max_length - 3] + "..."
+    return text
+
+
+def safe_print(text: str) -> None:
+    """Print text safely on Windows consoles with narrow encodings."""
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        print(text.encode("ascii", errors="replace").decode("ascii"))
 
 
 def save_output(output_path: Path, rows: list[dict[str, str | int]]) -> None:
@@ -117,23 +142,21 @@ def main() -> None:
         print("No target was entered.")
         return
 
-    input_file = Path(args.input_file) if args.input_file else None
-    if input_file:
-        print(f"Loading antibody table from {input_file}...")
-    else:
-        print("Downloading Thera-SAbDab antibody table...")
-    raw_rows = load_antibody_table(input_file)
-
-    print("Fetching target aliases from NCBI Gene...")
+    print("Fetching target aliases from NCBI Gene and IEDB...")
     target_aliases = safe_fetch_gene_aliases(target_query)
 
-    print("Filtering antibodies and checking PubMed references...")
-    processed_rows = filter_and_process_antibodies(
-        raw_rows=raw_rows,
+    input_file = Path(args.input_file) if args.input_file else None
+    if input_file:
+        print(f"Searching sources using local Thera-SAbDab table from {input_file}...")
+    else:
+        print("Searching sources in parallel...")
+
+    processed_rows = search_all_sources(
+        therasabdab_loader=lambda: load_antibody_table(input_file),
         target_query=target_query,
+        target_aliases=target_aliases,
         limit=args.limit,
         reference_counter=safe_count_pubmed_references,
-        extra_aliases=target_aliases,
         species_filters=parse_species_filters(args.species),
     )
 

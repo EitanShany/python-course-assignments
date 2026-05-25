@@ -8,28 +8,14 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from antibody_processing import (
+    OUTPUT_COLUMNS,
     SPECIES_OPTIONS,
-    filter_and_process_antibodies,
     write_excel_results,
     write_results,
 )
 from antibody_search import safe_count_pubmed_references, safe_fetch_gene_aliases
 from data_sources import load_antibody_table
-
-
-TABLE_COLUMNS = [
-    "antibody_name",
-    "target_antigen_or_gene",
-    "target_category",
-    "cancer_indication",
-    "antibody_species_or_type",
-    "antibody_format",
-    "highest_clinical_trial",
-    "estimated_status",
-    "pubmed_reference_count",
-    "heavy_variable_region_sequence",
-    "light_variable_region_sequence",
-]
+from multi_source_search import search_all_sources
 
 
 class AntibodySearchApp:
@@ -87,8 +73,8 @@ class AntibodySearchApp:
             row=0, column=len(self.species_vars) + 1, padx=4
         )
 
-        self.table = ttk.Treeview(self.root, columns=TABLE_COLUMNS, show="headings", height=15)
-        for column in TABLE_COLUMNS:
+        self.table = ttk.Treeview(self.root, columns=OUTPUT_COLUMNS, show="headings", height=15)
+        for column in OUTPUT_COLUMNS:
             self.table.heading(column, text=column)
             self.table.column(column, width=160, stretch=True)
         self.table.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
@@ -143,14 +129,13 @@ class AntibodySearchApp:
 
     def run_search(self, target: str, limit: int, species_filters: list[str]) -> None:
         try:
-            raw_rows = self.raw_rows or load_antibody_table()
             aliases = safe_fetch_gene_aliases(target)
-            rows = filter_and_process_antibodies(
-                raw_rows=raw_rows,
+            rows = search_all_sources(
+                therasabdab_loader=lambda: self.raw_rows or load_antibody_table(),
                 target_query=target,
+                target_aliases=aliases,
                 limit=limit,
                 reference_counter=safe_count_pubmed_references,
-                extra_aliases=aliases,
                 species_filters=species_filters,
             )
         except Exception as error:
@@ -164,7 +149,7 @@ class AntibodySearchApp:
         self.rows = rows
         self.table.delete(*self.table.get_children())
         for row in rows:
-            values = [str(row.get(column, "")) for column in TABLE_COLUMNS]
+            values = [str(row.get(column, "")) for column in OUTPUT_COLUMNS]
             self.table.insert("", tk.END, values=values)
         self.status_var.set(f"Found {len(rows)} antibodies")
 
