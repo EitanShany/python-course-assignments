@@ -22,8 +22,23 @@
    project uses more than one database or data source, prefer a separate module for
    each source.
 - Add information-security and data-validation checks when code receives data from
-   files, users, databases, APIs, or websites. For example, in Day06 code that queries
-   external databases, verify that returned fields, data types, identifiers, sequence
-   values, lengths, and required columns match the expected format before using the
-   data in calculations, saving it, or displaying it. Handle unexpected or malformed
-   responses safely and clearly.
+   files, users, databases, APIs, or websites. Verify that returned fields, data
+   types, identifiers, sequence values, lengths, and required columns match the
+   expected format before using the data in calculations, saving it, or displaying
+   it. Handle unexpected or malformed responses safely and clearly.
+- Do not hard-code secrets such as API keys, passwords, tokens, private URLs, or
+   personal credentials in the code. Use environment variables or local
+   configuration files that are not committed to git.
+- Validate all user input before using it in file paths, API requests, database
+   queries, calculations, or command execution.
+- Do not open, download, execute, or import files from unknown sources without
+   checking their type, size, content format, and expected purpose.
+- When saving output files, avoid overwriting existing files unless explicitly
+   requested. Use clear file names and safe output folders.
+- Do not print or save sensitive information such as tokens, passwords, personal
+   identifiers, private file paths, or full API responses unless needed for
+   debugging and explicitly approved.
+- Add timeouts and error handling for external API/database requests so the program
+   does not hang indefinitely or crash on malformed responses.
+- Prefer HTTPS URLs for external requests and avoid disabling SSL/certificate
+   verification.
