@@ -2,3 +2,171 @@
 2026-06-06 22:41:41 INFO [httpx2] HTTP Request: GET http://testserver/api/search?target=PD1&limit=1&species=Human "HTTP/1.1 200 OK"
 2026-06-06 22:41:41 INFO [httpx2] HTTP Request: POST http://testserver/search "HTTP/1.1 200 OK"
 2026-06-06 22:41:41 INFO [httpx2] HTTP Request: GET http://testserver/api/search?target=PD1;rm%20-rf&limit=1 "HTTP/1.1 400 Bad Request"
+2026-06-06 22:49:05 WARNING [data_sources] Entrez request failed (attempt 1/3): <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1081)> — retrying in 0.50s
+2026-06-06 22:49:05 WARNING [data_sources] Entrez request failed (attempt 2/3): <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1081)> — retrying in 1.00s
+2026-06-06 22:49:06 ERROR [web_antibody_search] Error fetching NCBI gene aliases for PD-L1
+Traceback (most recent call last):
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\urllib\request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\http\client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\http\client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\http\client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\http\client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\http\client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\http\client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sock=sock,
+        ^^^^^^^^^^
+    ...<5 lines>...
+        session=session
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\ssl.py", line 1076, in _create
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\ssl.py", line 1372, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1081)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\python\python-course-assignments\python-course-assignments\Day08\web_antibody_search.py", line 93, in safe_fetch_gene_aliases
+    aliases = fetch_ncbi_gene_aliases(target_query, seed_aliases=seed_aliases)
+  File "C:\python\python-course-assignments\python-course-assignments\Day08\data_sources.py", line 218, in fetch_ncbi_gene_aliases
+    search_record = read_entrez_record(
+        Entrez.esearch,
+    ...<3 lines>...
+        retmax=max_genes,
+    )
+  File "C:\python\python-course-assignments\python-course-assignments\Day08\data_sources.py", line 189, in read_entrez_record
+    with search_function(**kwargs) as handle:
+         ~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\site-packages\Bio\Entrez\__init__.py", line 238, in esearch
+    return _open(request)
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\site-packages\Bio\Entrez\__init__.py", line 593, in _open
+    handle = urlopen(request)
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\urllib\request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\urllib\request.py", line 487, in open
+    response = self._open(req, data)
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\urllib\request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\urllib\request.py", line 464, in _call_chain
+    result = func(*args)
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\urllib\request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\urllib\request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1081)>
+2026-06-06 22:49:28 WARNING [web_antibody_search] Could not count PubMed references for Retlirafusp; returning 0.
+2026-06-06 22:49:32 WARNING [web_antibody_search] Could not count PubMed references for Xirestomig; returning 0.
+2026-06-06 22:56:08 WARNING [data_sources] Entrez request failed (attempt 1/3): <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1081)> — retrying in 0.50s
+2026-06-06 22:56:09 WARNING [data_sources] Entrez request failed (attempt 2/3): <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1081)> — retrying in 1.00s
+2026-06-06 22:56:10 ERROR [web_antibody_search] Error fetching NCBI gene aliases for PD-1
+Traceback (most recent call last):
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\urllib\request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\http\client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\http\client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\http\client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\http\client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\http\client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\http\client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sock=sock,
+        ^^^^^^^^^^
+    ...<5 lines>...
+        session=session
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\ssl.py", line 1076, in _create
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\ssl.py", line 1372, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1081)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\python\python-course-assignments\python-course-assignments\Day08\web_antibody_search.py", line 93, in safe_fetch_gene_aliases
+    aliases = fetch_ncbi_gene_aliases(target_query, seed_aliases=seed_aliases)
+  File "C:\python\python-course-assignments\python-course-assignments\Day08\data_sources.py", line 218, in fetch_ncbi_gene_aliases
+    search_record = read_entrez_record(
+        Entrez.esearch,
+    ...<3 lines>...
+        retmax=max_genes,
+    )
+  File "C:\python\python-course-assignments\python-course-assignments\Day08\data_sources.py", line 189, in read_entrez_record
+    with search_function(**kwargs) as handle:
+         ~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\site-packages\Bio\Entrez\__init__.py", line 238, in esearch
+    return _open(request)
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\site-packages\Bio\Entrez\__init__.py", line 593, in _open
+    handle = urlopen(request)
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\urllib\request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\urllib\request.py", line 487, in open
+    response = self._open(req, data)
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\urllib\request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\urllib\request.py", line 464, in _call_chain
+    result = func(*args)
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\urllib\request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\eitansh.WISMAIN\AppData\Local\Programs\Python\Python314\Lib\urllib\request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1081)>
