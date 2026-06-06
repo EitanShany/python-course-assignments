@@ -1,0 +1,5 @@
+.pytest_cache/
+__pycache__/
+antibody_results*.csv
+antibody_results*.xlsx
+target_aliases.txt

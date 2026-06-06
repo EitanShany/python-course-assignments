@@ -1,0 +1,6 @@
+biopython
+openpyxl
+pytest
+fastapi
+uvicorn
+python-multipart
