@@ -1,0 +1,4 @@
+2026-06-06 22:41:41 INFO [httpx2] HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+2026-06-06 22:41:41 INFO [httpx2] HTTP Request: GET http://testserver/api/search?target=PD1&limit=1&species=Human "HTTP/1.1 200 OK"
+2026-06-06 22:41:41 INFO [httpx2] HTTP Request: POST http://testserver/search "HTTP/1.1 200 OK"
+2026-06-06 22:41:41 INFO [httpx2] HTTP Request: GET http://testserver/api/search?target=PD1;rm%20-rf&limit=1 "HTTP/1.1 400 Bad Request"

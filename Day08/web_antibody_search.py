@@ -5,10 +5,16 @@ import io
 import re
 import urllib.error
 from html import escape
+from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
+import logging
+import os
+from uuid import uuid4
+from datetime import datetime, timezone
 
-from fastapi import FastAPI, Form, HTTPException, Query
+from logging_config import configure_logging
+from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -32,6 +38,27 @@ app = FastAPI(
 
 app.mount("/static", StaticFiles(directory=Path(__file__).resolve().parent / "static"), name="static")
 
+configure_logging()
+logger = logging.getLogger(__name__)
+
+# Simple in-memory rate limiter: allow `MAX_REQUESTS` per `WINDOW_SECONDS` per client IP.
+from collections import deque
+_RATE_LIMIT_STORE: dict[str, deque[float]] = {}
+MAX_REQUESTS = int(os.environ.get("RATE_LIMIT_MAX_REQUESTS", "20"))
+WINDOW_SECONDS = int(os.environ.get("RATE_LIMIT_WINDOW", "60"))
+
+
+def is_rate_limited(client_ip: str) -> bool:
+    now = datetime.now(timezone.utc).timestamp()
+    dq = _RATE_LIMIT_STORE.setdefault(client_ip, deque())
+    # Pop old timestamps
+    while dq and now - dq[0] > WINDOW_SECONDS:
+        dq.popleft()
+    if len(dq) >= MAX_REQUESTS:
+        return True
+    dq.append(now)
+    return False
+
 
 def is_safe_target_query(target_query: str) -> bool:
     """Validate target text and reject dangerous or overly long input."""
@@ -53,6 +80,7 @@ def safe_count_pubmed_references(antibody_name: str) -> int:
     try:
         return count_pubmed_references(antibody_name)
     except (urllib.error.URLError, TimeoutError, KeyError, ValueError, RuntimeError):
+        logger.warning("Could not count PubMed references for %s; returning 0.", antibody_name)
         return 0
 
 
@@ -63,13 +91,15 @@ def safe_fetch_gene_aliases(target_query: str) -> list[str]:
 
     try:
         aliases = fetch_ncbi_gene_aliases(target_query, seed_aliases=seed_aliases)
-    except Exception:
+    except (urllib.error.URLError, TimeoutError, KeyError, ValueError, RuntimeError, JSONDecodeError, OSError) as error:
+        logger.exception("Error fetching NCBI gene aliases for %s", target_query)
         aliases = [*seed_aliases]
 
     try:
         iedb_aliases = fetch_iedb_antigen_aliases(target_query, seed_aliases=aliases)
         aliases = list(dict.fromkeys([*aliases, *iedb_aliases]))
-    except Exception:
+    except (urllib.error.URLError, TimeoutError, KeyError, ValueError, RuntimeError, JSONDecodeError, OSError) as error:
+        logger.exception("Error fetching IEDB antigen aliases for %s", target_query)
         aliases = list(dict.fromkeys(aliases))
 
     return aliases or seed_aliases
@@ -78,11 +108,27 @@ def safe_fetch_gene_aliases(target_query: str) -> list[str]:
 def save_output_files(rows: list[dict[str, str | int]], output_dir: Path) -> tuple[Path, Path]:
     """Write a CSV and Excel copy to the local output folder."""
     output_dir.mkdir(parents=True, exist_ok=True)
+    # Write unique backup files to avoid silent overwrites, but also keep
+    # stable filenames for compatibility (`antibody_results.csv` / .xlsx).
+    unique_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid4().hex[:8]
+    csv_unique = output_dir / f"antibody_results-{unique_id}.csv"
+    excel_unique = output_dir / f"antibody_results-{unique_id}.xlsx"
+
+    # Primary/stable paths (kept for compatibility with tests and simple downloads)
     csv_path = output_dir / "antibody_results.csv"
     excel_path = output_dir / "antibody_results.xlsx"
-    write_results(csv_path, rows)
-    write_excel_results(excel_path, rows)
-    return csv_path, excel_path
+
+    write_results(csv_unique, rows)
+    write_excel_results(excel_unique, rows)
+
+    # Also write/update the stable filenames (overwrites previous stable copies).
+    try:
+        write_results(csv_path, rows)
+        write_excel_results(excel_path, rows)
+    except Exception as e:
+        logger.exception("Failed to write stable output files: %s", e)
+
+    return csv_unique, excel_unique
 
 
 def build_data_rows(rows: list[dict[str, str | int]]) -> list[dict[str, str | int]]:
@@ -233,6 +279,7 @@ def home() -> HTMLResponse:
 
 @app.post("/search", response_class=HTMLResponse)
 def search_form(
+    request: Request,
     target: str = Form(...),
     limit: int = Form(20),
     species: list[str] = Form([]),
@@ -240,11 +287,16 @@ def search_form(
     if not is_safe_target_query(target):
         return HTMLResponse(build_html_page(target_query=target, error_message="Unsupported target query."))
 
+    client_ip = request.client.host if request.client else "unknown"
+    if is_rate_limited(client_ip):
+        return HTMLResponse(build_html_page(target_query=target, error_message="Rate limit exceeded. Try again later."), status_code=429)
+
     species_filters = normalize_species_filters(species)
 
     try:
         rows, aliases = run_search(target, limit, species_filters)
     except Exception as error:
+        logger.exception("Search failed for target=%s", target)
         return HTMLResponse(build_html_page(target_query=target, species_filters=species_filters, error_message=str(error)))
 
     table_html = build_result_table_html(rows)
@@ -254,6 +306,7 @@ def search_form(
 
 @app.get("/api/search", response_class=JSONResponse)
 def api_search(
+    request: Request,
     target: str = Query(...),
     limit: int = Query(20, gt=0, lt=101),
     species: str = Query(""),
@@ -261,12 +314,17 @@ def api_search(
     if not is_safe_target_query(target):
         raise HTTPException(status_code=400, detail="Unsupported target query.")
 
+    client_ip = request.client.host if request.client else "unknown"
+    if is_rate_limited(client_ip):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again later.")
+
     species_filters = [value.strip() for value in species.split(",") if value.strip()]
     species_filters = normalize_species_filters(species_filters)
 
     try:
         rows, aliases = run_search(target, limit, species_filters)
     except Exception as error:
+        logger.exception("API search failed for target=%s", target)
         raise HTTPException(status_code=500, detail=str(error))
 
     return {"target": target, "aliases": aliases, "results": rows}

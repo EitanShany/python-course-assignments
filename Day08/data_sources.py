@@ -9,12 +9,16 @@ import json
 import os
 import re
 import ssl
+import logging
 import urllib.parse
 import urllib.request
+from logging_config import configure_logging
 from pathlib import Path
 
 from Bio import Entrez
 from openpyxl import load_workbook
+
+configure_logging()
 
 
 THERASABDAB_CSV_URL = (
@@ -39,13 +43,25 @@ ALIAS_OUTPUT_FILE = Path(__file__).with_name("target_aliases.txt")
 
 
 def open_url(request: urllib.request.Request, timeout: int = 30):
-    """Open a URL, with a certificate fallback for course lab computers."""
+    """Open a URL, with an optional certificate fallback for lab computers.
+
+    Fallback to an unverified SSL context only when the environment variable
+    `ALLOW_INSECURE_SSL` is set to a truthy value ("1", "true"). This avoids
+    silently accepting invalid certificates in production.
+    """
     try:
         return urllib.request.urlopen(request, timeout=timeout)
     except urllib.error.URLError as error:
+        # Only fallback for certificate verification failures and when explicitly allowed.
         if "CERTIFICATE_VERIFY_FAILED" not in str(error):
             raise
 
+        allow_insecure = os.environ.get("ALLOW_INSECURE_SSL", "0").lower() in {"1", "true", "yes"}
+        if not allow_insecure:
+            raise
+
+        # Log that we're using an insecure context (useful for debugging, avoids silent insecure behavior).
+        logging.getLogger(__name__).warning("Using unverified SSL context due to certificate verification failure and ALLOW_INSECURE_SSL set.")
         insecure_context = ssl._create_unverified_context()
         return urllib.request.urlopen(request, timeout=timeout, context=insecure_context)
 
@@ -153,15 +169,40 @@ def count_pubmed_references(antibody_name: str) -> int:
 
 def read_entrez_record(search_function, **kwargs):
     """Run a Biopython Entrez request with SSL handling for course computers."""
-    insecure_context = ssl._create_unverified_context()
+    # Support retries with exponential backoff for Entrez network calls.
+    max_retries = int(os.environ.get("ENTREZ_MAX_RETRIES", "2"))
+    backoff = float(os.environ.get("ENTREZ_BACKOFF", "0.5"))
     previous_urlopen = Entrez.urlopen
-    Entrez.urlopen = lambda request: urllib.request.urlopen(
-        request,
-        context=insecure_context,
-    )
+    insecure_context = None
+    try_insecure = os.environ.get("ALLOW_INSECURE_SSL", "0").lower() in {"1", "true", "yes"}
+
     try:
-        with search_function(**kwargs) as handle:
-            return Entrez.read(handle)
+        for attempt in range(1, max_retries + 2):
+            try:
+                if try_insecure and insecure_context is None:
+                    insecure_context = ssl._create_unverified_context()
+                    Entrez.urlopen = lambda request: urllib.request.urlopen(request, context=insecure_context)
+                elif not try_insecure:
+                    # Use default behavior
+                    Entrez.urlopen = previous_urlopen
+
+                with search_function(**kwargs) as handle:
+                    return Entrez.read(handle)
+            except Exception as e:
+                # On last attempt, re-raise the exception.
+                if attempt >= max_retries + 1:
+                    raise
+                sleep_time = backoff * (2 ** (attempt - 1))
+                logging.getLogger(__name__).warning(
+                    "Entrez request failed (attempt %s/%s): %s — retrying in %.2fs",
+                    attempt,
+                    max_retries + 1,
+                    e,
+                    sleep_time,
+                )
+                import time
+
+                time.sleep(sleep_time)
     finally:
         Entrez.urlopen = previous_urlopen
 

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 import threading
 import tkinter as tk
+from logging_config import configure_logging
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
@@ -16,6 +18,9 @@ from antibody_processing import (
 from antibody_search import safe_count_pubmed_references, safe_fetch_gene_aliases
 from data_sources import load_antibody_table
 from multi_source_search import search_all_sources
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 class AntibodySearchApp:
@@ -109,6 +114,7 @@ class AntibodySearchApp:
         try:
             self.raw_rows = load_antibody_table(Path(file_name))
         except Exception as error:
+            logger.exception("Failed to load antibody table: %s", file_name)
             messagebox.showerror("Load failed", str(error))
             return
 
@@ -139,6 +145,7 @@ class AntibodySearchApp:
                 species_filters=species_filters,
             )
         except Exception as error:
+            logger.exception("Search failed for target %s", target)
             self.root.after(0, lambda: messagebox.showerror("Search failed", str(error)))
             self.root.after(0, lambda: self.status_var.set("Search failed"))
             return

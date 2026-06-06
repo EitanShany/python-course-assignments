@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import urllib.error
+from json import JSONDecodeError
+from logging_config import configure_logging
 from pathlib import Path
 
 from antibody_processing import (
@@ -19,6 +22,9 @@ from data_sources import (
     write_target_aliases,
 )
 from multi_source_search import search_all_sources
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -55,8 +61,8 @@ def safe_count_pubmed_references(antibody_name: str) -> int:
     """Return a PubMed count, or zero if PubMed is temporarily unavailable."""
     try:
         return count_pubmed_references(antibody_name)
-    except (urllib.error.URLError, TimeoutError, KeyError, ValueError, RuntimeError) as error:
-        print(f"Could not count PubMed references for {antibody_name}: {error}")
+    except (urllib.error.URLError, TimeoutError, KeyError, ValueError, RuntimeError, OSError) as error:
+        logger.warning("Could not count PubMed references for %s: %s", antibody_name, error)
         return 0
 
 
@@ -65,15 +71,15 @@ def safe_fetch_gene_aliases(target_query: str) -> list[str]:
     seed_aliases = expanded_target_queries(target_query)
     try:
         aliases = fetch_ncbi_gene_aliases(target_query, seed_aliases=seed_aliases)
-    except Exception as error:
-        print(f"Could not fetch NCBI Gene aliases for {target_query}: {error}")
+    except (urllib.error.URLError, TimeoutError, KeyError, ValueError, RuntimeError, JSONDecodeError, OSError) as error:
+        logger.exception("Could not fetch NCBI Gene aliases for %s", target_query)
         aliases = seed_aliases
 
     try:
         iedb_aliases = fetch_iedb_antigen_aliases(target_query, seed_aliases=aliases)
         aliases = list(dict.fromkeys([*aliases, *iedb_aliases]))
-    except Exception as error:
-        print(f"Could not fetch IEDB antigen aliases for {target_query}: {error}")
+    except (urllib.error.URLError, TimeoutError, KeyError, ValueError, RuntimeError, JSONDecodeError, OSError) as error:
+        logger.exception("Could not fetch IEDB antigen aliases for %s", target_query)
 
     alias_path = write_target_aliases(target_query, aliases)
     print(f"Target aliases saved to: {alias_path}")

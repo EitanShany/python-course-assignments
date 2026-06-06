@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import concurrent.futures
 
+import logging
+
 from antibody_processing import deduplicate_results, sort_by_quality
 from sources.iedb_source import search_iedb
 from sources.lens_patseq_source import search_lens_patseq
 from sources.plabdab_source import search_plabdab
 from sources.therasabdab_source import ReferenceCounter, TheraSAbDabLoader, search_therasabdab
+
+logger = logging.getLogger(__name__)
 
 
 def search_all_sources(
@@ -48,6 +52,7 @@ def search_all_sources(
             try:
                 rows.extend(future.result())
             except Exception as error:
-                print(f"Could not search {source_name}: {error}")
+                # Log full exception details; do not silently swallow errors.
+                logger.exception("Could not search %s: %s", source_name, error)
 
     return sort_by_quality(deduplicate_results(rows))[: max(limit, 0)]
