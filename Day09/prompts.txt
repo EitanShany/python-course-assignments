@@ -1,0 +1,12 @@
+Prompt used to ask ChatGPT for dataset/model suggestions:
+
+"I want to build a simple, reproducible example for Day 9 of a Python course.
+Recommend a public dataset (CSV accessible via URL) suitable for a small prediction task and explain why.
+Give me two modelling approaches (regression/classification) and 2-3 business-use cases for each approach.
+Also provide a minimal code outline to download the data, train a model with scikit-learn, save the model, and run a prediction."
+Selected dataset for implementation:
+- Pima Indians Diabetes (binary classification)
+- 8 features, 768 rows, target = diabetes onset
+Prompt used to ask for business logic phrasing (Hebrew):
+
+"תאר 2-3 לוגיקות עסקיות (בעברית) שניתן לממש על סמך המודל הזה. כל לוגיקה - שם קצר ותיאור פעולה ואיך היא תומכת בהחלטה עסקית."

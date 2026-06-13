@@ -1,0 +1,11 @@
+Example,ExpectedPrediction,DiabetesProbability
+1,Healthy,0.010
+2,Healthy,0.030
+3,Healthy,0.190
+4,Healthy,0.400
+5,Healthy,0.300
+6,Diabetes,0.740
+7,Diabetes,0.890
+8,Diabetes,0.780
+9,Diabetes,0.750
+10,Diabetes,0.740
