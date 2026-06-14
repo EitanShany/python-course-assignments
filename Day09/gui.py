@@ -1,6 +1,8 @@
 """Graphical user interface for Pima Diabetes exploration and prediction."""
 import json
+import os
 from pathlib import Path
+import tempfile
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
@@ -12,6 +14,13 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from sklearn.decomposition import PCA
 from sklearn.metrics import auc, roc_curve
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+os.environ.setdefault(
+    "NUMBA_CACHE_DIR",
+    str(Path(tempfile.gettempdir()) / "day09_numba_cache"),
+)
+from umap import UMAP
 
 try:
     from .data_utils import (
@@ -172,6 +181,7 @@ class DiabetesGUI(tk.Tk):
         self.create_separation_section(container)
         self.create_correlation_section(container)
         self.create_pca_section(container)
+        self.create_umap_section(container)
         self.create_importance_section(container)
         self.create_boxplot_section(container)
         self.create_prediction_table_section(container)
@@ -339,6 +349,30 @@ class DiabetesGUI(tk.Tk):
         buttons = ttk.Frame(section.content)
         buttons.pack(fill=tk.X, pady=4)
         ttk.Button(buttons, text="שמור PCA", command=lambda: self.save_figure(fig, "pca_scatter.png")).pack(side=tk.LEFT)
+
+    def create_umap_section(self, parent):
+        section = CollapsibleSection(parent, "UMAP scatter plot")
+        section.pack(fill=tk.BOTH, expand=True)
+        text = (
+            "UMAP projects the standardized features into two dimensions, "
+            "with color based on Outcome."
+        )
+        ttk.Label(section.content, text=text).pack(
+            anchor=tk.W,
+            padx=4,
+            pady=4,
+        )
+        frame = ttk.Frame(section.content)
+        frame.pack(fill=tk.BOTH, expand=True, padx=4, pady=4)
+        fig, self.umap_canvas = self.create_plot_canvas(frame)
+        self.draw_umap(fig)
+        buttons = ttk.Frame(section.content)
+        buttons.pack(fill=tk.X, pady=4)
+        ttk.Button(
+            buttons,
+            text="שמור UMAP",
+            command=lambda: self.save_figure(fig, "umap_scatter.png"),
+        ).pack(side=tk.LEFT)
 
     def create_importance_section(self, parent):
         section = CollapsibleSection(parent, "Feature importance")
@@ -702,6 +736,76 @@ class DiabetesGUI(tk.Tk):
             ),
         )
 
+    def umap_projection(self):
+        features = self.data[FEATURE_NAMES]
+        if len(features) < 3:
+            raise ValueError("UMAP requires at least 3 dataset rows.")
+
+        scaler = StandardScaler()
+        scaled_features = scaler.fit_transform(features)
+        reducer = UMAP(
+            n_components=2,
+            n_neighbors=min(15, len(features) - 1),
+            random_state=42,
+            n_jobs=1,
+        )
+        projected = reducer.fit_transform(scaled_features)
+
+        extra_projected = np.empty((0, 2))
+        if not self.extra_examples.empty:
+            scaled_extra = scaler.transform(
+                self.extra_examples[FEATURE_NAMES]
+            )
+            extra_projected = reducer.transform(scaled_extra)
+        return projected, extra_projected
+
+    def draw_umap_axes(self, ax):
+        try:
+            projected, extra_projected = self.umap_projection()
+        except ValueError as exc:
+            ax.text(0.5, 0.5, str(exc), ha="center", va="center")
+            ax.set_axis_off()
+            return
+
+        for label in sorted(self.data["Outcome"].unique()):
+            mask = self.data["Outcome"] == label
+            ax.scatter(
+                projected[mask, 0],
+                projected[mask, 1],
+                label=outcome_label(label),
+                alpha=0.7,
+                edgecolors="k",
+                s=45,
+            )
+        if len(extra_projected):
+            ax.scatter(
+                extra_projected[:, 0],
+                extra_projected[:, 1],
+                c="black",
+                marker="X",
+                s=100,
+                label="Additional example",
+            )
+        ax.set_xlabel("UMAP 1")
+        ax.set_ylabel("UMAP 2")
+        ax.set_title("UMAP scatter plot")
+        ax.legend(fontsize=8)
+        ax.grid(alpha=0.3)
+
+    def draw_umap(self, fig):
+        fig.clf()
+        ax = fig.add_subplot(111)
+        self.draw_umap_axes(ax)
+        fig.tight_layout()
+        fig.canvas.draw()
+        connect_click_handler(
+            fig,
+            lambda event: self.open_large_plot(
+                self.draw_umap_axes,
+                "umap_scatter",
+            ),
+        )
+
     def draw_boxplot(self, fig, feature):
         if self.box_plot_type.get() == "Violin plot":
             self.draw_violin(fig, feature)
@@ -826,6 +930,7 @@ class DiabetesGUI(tk.Tk):
         self.draw_risk_distribution(self.risk_canvas.figure)
         self.draw_roc_curve(self.roc_canvas.figure)
         self.draw_pca(self.pca_canvas.figure)
+        self.draw_umap(self.umap_canvas.figure)
         self.draw_feature_importance(self.importance_canvas.figure)
         self.draw_boxplot(self.box_canvas.figure, self.box_feature.get())
 

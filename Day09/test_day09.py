@@ -125,6 +125,20 @@ class SeparationModel:
         return (self.predict_proba(sample)[:, 1] >= 0.5).astype(int)
 
 
+class FakeUMAP:
+    def __init__(self, *args, **kwargs):
+        self.fit_rows = 0
+
+    def fit_transform(self, features):
+        self.fit_rows = len(features)
+        values = np.arange(self.fit_rows, dtype=float)
+        return np.column_stack([values, values + 1])
+
+    def transform(self, features):
+        values = np.arange(len(features), dtype=float)
+        return np.column_stack([values + 10, values + 11])
+
+
 def fake_gui_for_json(raw_text, model=None):
     instance = SimpleNamespace(
         json_text=Mock(),
@@ -373,6 +387,54 @@ class Day09QATests(unittest.TestCase):
         axes = figure.axes[0]
         self.assertEqual(len(axes.collections), 2)
         self.assertEqual(axes.get_ylabel(), "Age")
+
+    def test_umap_shows_outcomes_and_additional_examples(self):
+        fake_gui = SimpleNamespace(
+            data=training_rows(),
+            extra_examples=pd.DataFrame(
+                [alternative_sample_values()],
+                columns=FEATURES,
+            ),
+            open_large_plot=Mock(),
+            umap_projection=Mock(),
+            draw_umap_axes=Mock(),
+        )
+        fake_gui.umap_projection.side_effect = (
+            lambda: gui.DiabetesGUI.umap_projection(fake_gui)
+        )
+        fake_gui.draw_umap_axes.side_effect = (
+            lambda ax: gui.DiabetesGUI.draw_umap_axes(fake_gui, ax)
+        )
+        figure = Figure()
+
+        with patch.object(gui, "UMAP", FakeUMAP):
+            gui.DiabetesGUI.draw_umap(fake_gui, figure)
+
+        axes = figure.axes[0]
+        self.assertEqual(len(axes.collections), 3)
+        self.assertEqual(axes.get_xlabel(), "UMAP 1")
+        self.assertEqual(axes.get_ylabel(), "UMAP 2")
+
+    def test_umap_handles_too_few_rows(self):
+        fake_gui = SimpleNamespace(
+            data=dataset_rows(),
+            extra_examples=pd.DataFrame(columns=FEATURES),
+            open_large_plot=Mock(),
+            umap_projection=Mock(),
+            draw_umap_axes=Mock(),
+        )
+        fake_gui.umap_projection.side_effect = (
+            lambda: gui.DiabetesGUI.umap_projection(fake_gui)
+        )
+        fake_gui.draw_umap_axes.side_effect = (
+            lambda ax: gui.DiabetesGUI.draw_umap_axes(fake_gui, ax)
+        )
+        figure = Figure()
+
+        gui.DiabetesGUI.draw_umap(fake_gui, figure)
+
+        self.assertEqual(len(figure.axes[0].texts), 1)
+        self.assertIn("at least 3", figure.axes[0].texts[0].get_text())
 
     def test_boxplot_supports_only_zero_outcome(self):
         fake_gui = SimpleNamespace(

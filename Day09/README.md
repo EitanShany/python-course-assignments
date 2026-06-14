@@ -14,6 +14,7 @@ Dataset: Pima Indians Diabetes
 - `predict_example.py` — טוען את המודל ומריץ דוגמת חיזוי.
 - `visualize.py` — מציג גרף של אוכלוסיות לפי שדות Glucose ו־BMI.
 - `gui.py` — ממשק גרפי לטעינת דוגמאות נוספות, צפייה בגרפים ושמירה שלהם.
+- הממשק כולל גם גרף UMAP דו-ממדי לאחר נרמול התכונות.
 - `requirements.txt` — תלותיות.
 - `prompts.txt` — הפקודות ששאלנו את ChatGPT.
 
