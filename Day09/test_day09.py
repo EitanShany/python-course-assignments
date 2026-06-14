@@ -547,6 +547,39 @@ class Day09QATests(unittest.TestCase):
 
         self.assertTrue(figure.axes[0].texts)
 
+    def test_prediction_strip_marks_misclassified_samples(self):
+        fake_gui = SimpleNamespace(
+            model_evaluation_data=Mock(
+                return_value=(
+                    np.array([0, 0, 1, 1]),
+                    np.array([0.1, 0.8, 0.3, 0.9]),
+                )
+            )
+        )
+        figure = Figure()
+
+        gui.DiabetesGUI.draw_prediction_strip(fake_gui, figure)
+
+        legend_labels = [
+            text.get_text()
+            for text in figure.axes[0].get_legend().get_texts()
+        ]
+        self.assertIn("Misclassified", legend_labels)
+        self.assertEqual(
+            [label.get_text() for label in figure.axes[0].get_yticklabels()],
+            ["Healthy", "Diabetes"],
+        )
+
+    def test_prediction_strip_handles_missing_model(self):
+        fake_gui = SimpleNamespace(
+            model_evaluation_data=Mock(return_value=(None, None))
+        )
+        figure = Figure()
+
+        gui.DiabetesGUI.draw_prediction_strip(fake_gui, figure)
+
+        self.assertIn("No trained model", figure.axes[0].texts[0].get_text())
+
     def test_clear_first_set_of_extra_examples(self):
         fake_gui = SimpleNamespace(
             extra_examples=pd.DataFrame([sample_values()], columns=FEATURES),

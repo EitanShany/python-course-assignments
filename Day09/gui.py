@@ -321,6 +321,20 @@ class DiabetesGUI(tk.Tk):
         roc_fig, self.roc_canvas = self.create_plot_canvas(roc_frame)
         self.draw_roc_curve(roc_fig)
 
+        decision_frame = ttk.Frame(plots_frame)
+        decision_frame.grid(
+            row=1,
+            column=0,
+            columnspan=2,
+            sticky="nsew",
+            padx=4,
+            pady=4,
+        )
+        decision_fig, self.decision_canvas = self.create_plot_canvas(
+            decision_frame
+        )
+        self.draw_prediction_strip(decision_fig)
+
         buttons = ttk.Frame(section.content)
         buttons.pack(fill=tk.X, pady=4)
         ttk.Button(
@@ -335,6 +349,14 @@ class DiabetesGUI(tk.Tk):
             buttons,
             text="שמור ROC",
             command=lambda: self.save_figure(roc_fig, "roc_curve.png"),
+        ).pack(side=tk.LEFT, padx=8)
+        ttk.Button(
+            buttons,
+            text="Save Prediction Strip",
+            command=lambda: self.save_figure(
+                decision_fig,
+                "prediction_strip.png",
+            ),
         ).pack(side=tk.LEFT, padx=8)
 
     def create_pca_section(self, parent):
@@ -670,6 +692,72 @@ class DiabetesGUI(tk.Tk):
         fig.tight_layout()
         fig.canvas.draw()
 
+    def draw_prediction_strip(self, fig):
+        """Show model decisions, true groups, and errors on one probability axis."""
+        fig.clf()
+        ax = fig.add_subplot(111)
+        outcomes, probabilities = self.model_evaluation_data()
+        if probabilities is None:
+            ax.text(
+                0.5,
+                0.5,
+                "No trained model found",
+                ha="center",
+                va="center",
+            )
+            ax.set_axis_off()
+            fig.canvas.draw()
+            return
+
+        outcomes = np.asarray(outcomes)
+        probabilities = np.asarray(probabilities)
+        predicted = (probabilities >= 0.5).astype(int)
+        errors = predicted != outcomes
+        jitter = np.linspace(-0.12, 0.12, len(probabilities))
+
+        for outcome, color in ((0, "tab:blue"), (1, "tab:orange")):
+            mask = outcomes == outcome
+            ax.scatter(
+                probabilities[mask],
+                outcome + jitter[mask],
+                color=color,
+                edgecolors="black",
+                alpha=0.75,
+                s=55,
+                label=outcome_label(outcome),
+            )
+
+        if errors.any():
+            ax.scatter(
+                probabilities[errors],
+                outcomes[errors] + jitter[errors],
+                marker="x",
+                color="red",
+                linewidths=2,
+                s=90,
+                label="Misclassified",
+            )
+
+        ax.axvspan(0, 0.5, color="tab:blue", alpha=0.07)
+        ax.axvspan(0.5, 1, color="tab:orange", alpha=0.07)
+        ax.axvline(
+            0.5,
+            color="black",
+            linestyle="--",
+            label="Decision threshold 0.5",
+        )
+        ax.set_xlim(0, 1)
+        ax.set_ylim(-0.25, 1.25)
+        ax.set_yticks([0, 1])
+        ax.set_yticklabels([outcome_label(0), outcome_label(1)])
+        ax.set_xlabel("Predicted diabetes probability")
+        ax.set_ylabel("True outcome")
+        ax.set_title("Model Decision Strip - True Outcomes and Errors")
+        ax.legend(fontsize=8, loc="upper center", ncol=2)
+        ax.grid(axis="x", alpha=0.3)
+        fig.tight_layout()
+        fig.canvas.draw()
+
     def draw_feature_importance(self, fig):
         fig.clf()
         ax = fig.add_subplot(111)
@@ -929,6 +1017,7 @@ class DiabetesGUI(tk.Tk):
         self.draw_correlation(self.corr_canvas.figure)
         self.draw_risk_distribution(self.risk_canvas.figure)
         self.draw_roc_curve(self.roc_canvas.figure)
+        self.draw_prediction_strip(self.decision_canvas.figure)
         self.draw_pca(self.pca_canvas.figure)
         self.draw_umap(self.umap_canvas.figure)
         self.draw_feature_importance(self.importance_canvas.figure)
