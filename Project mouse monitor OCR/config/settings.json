@@ -1,0 +1,35 @@
+{
+  "excel_template_path": "data/templates/Book1.xlsx",
+  "output_folder": "data/output",
+  "input_images_folder": "data/input_images",
+  "sheet_name": "output",
+  "mouse_id_column": "B",
+  "mouse_id_start_row": 9,
+  "output_columns": {
+    "W": "K",
+    "L": "L",
+    "Weight": "M"
+  },
+  "valid_ranges": {
+    "W": {"min": 0.0, "max": 20.0},
+    "L": {"min": 0.0, "max": 20.0},
+    "Weight": {"min": 0.0, "max": 40.0}
+  },
+  "excel_rules": {
+    "preserve_rows": true,
+    "preserve_columns": true,
+    "preserve_formatting": true,
+    "preserve_formulas": true,
+    "preserve_empty_rows": true,
+    "preserve_cage_structure": true,
+    "allow_delete_rows": false,
+    "allow_sort_rows": false,
+    "allow_shift_rows": false,
+    "allow_compress_rows": false
+  },
+  "mapping_key": "mouse_id",
+  "zero_is_valid": true,
+  "decimal_separator": ".",
+  "decimal_places": 2,
+  "excel_number_format": "0.00"
+}

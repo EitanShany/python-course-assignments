@@ -42,3 +42,19 @@
    does not hang indefinitely or crash on malformed responses.
 - Prefer HTTPS URLs for external requests and avoid disabling SSL/certificate
    verification.
+
+## QA review requirements
+- Before finishing code changes in a project, review the code that was written or affected.
+- Check whether there are unnecessary, duplicated, or overly complicated code sections that can be simplified without changing behavior.
+- When simplifying code, consider edge cases so valid unusual inputs do not break the program.
+- Check security and data validation: user paths, workbook contents, file names, API/database responses, and any external data should be validated before use.
+- Do not hard-code secrets, tokens, passwords, private URLs, or personal credentials.
+- Check for bugs such as mismatched column names, stale function names, wrong return types, incorrect output schemas, and off-by-one row numbers.
+- Add or update tests for new behavior and relevant edge cases.
+- Run the test suite before the final response whenever code was changed:
+
+```powershell
+pytest
+```
+
+- If tests cannot be run, explain clearly why and what remains unverified.

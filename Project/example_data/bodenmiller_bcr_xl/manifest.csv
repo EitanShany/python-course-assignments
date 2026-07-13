@@ -1,0 +1,17 @@
+Well,Sample_ID,Subject_ID,Treatment,Tissue,Replicate,FCS_File
+A01,patient1_BCR-XL,patient1,BCR-XL,PBMC,1,PBMC8_30min_patient1_BCR-XL.fcs
+A02,patient1_Reference,patient1,Reference,PBMC,1,PBMC8_30min_patient1_Reference.fcs
+A03,patient2_BCR-XL,patient2,BCR-XL,PBMC,1,PBMC8_30min_patient2_BCR-XL.fcs
+A04,patient2_Reference,patient2,Reference,PBMC,1,PBMC8_30min_patient2_Reference.fcs
+A05,patient3_BCR-XL,patient3,BCR-XL,PBMC,1,PBMC8_30min_patient3_BCR-XL.fcs
+A06,patient3_Reference,patient3,Reference,PBMC,1,PBMC8_30min_patient3_Reference.fcs
+A07,patient4_BCR-XL,patient4,BCR-XL,PBMC,1,PBMC8_30min_patient4_BCR-XL.fcs
+A08,patient4_Reference,patient4,Reference,PBMC,1,PBMC8_30min_patient4_Reference.fcs
+A09,patient5_BCR-XL,patient5,BCR-XL,PBMC,1,PBMC8_30min_patient5_BCR-XL.fcs
+A10,patient5_Reference,patient5,Reference,PBMC,1,PBMC8_30min_patient5_Reference.fcs
+A11,patient6_BCR-XL,patient6,BCR-XL,PBMC,1,PBMC8_30min_patient6_BCR-XL.fcs
+A12,patient6_Reference,patient6,Reference,PBMC,1,PBMC8_30min_patient6_Reference.fcs
+A13,patient7_BCR-XL,patient7,BCR-XL,PBMC,1,PBMC8_30min_patient7_BCR-XL.fcs
+A14,patient7_Reference,patient7,Reference,PBMC,1,PBMC8_30min_patient7_Reference.fcs
+A15,patient8_BCR-XL,patient8,BCR-XL,PBMC,1,PBMC8_30min_patient8_BCR-XL.fcs
+A16,patient8_Reference,patient8,Reference,PBMC,1,PBMC8_30min_patient8_Reference.fcs
